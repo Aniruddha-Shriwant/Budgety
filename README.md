@@ -1,2 +1,2 @@
-# Budgety[aniruddha-shriwant.github.io/budgety/]
+# Budgety
 Budget calculator web app 
