@@ -34,6 +34,64 @@ var budgetController = (function () {
         data.total[type] = sum;
     };
 
+    var fetchLocalData = function(){
+        let localStorageString = localStorage.getItem("localBudget");
+        if(!localStorageString)
+            return console.log("Not found local data");
+        
+        let localData = JSON.parse(localStorageString);
+
+        console.log("LocalData:",localData);
+        
+        // Process all income entries
+        let percentages = [];
+        data.allItems.exp = localData.allItems.exp.map((expense)=>{
+            let exp = new Expense(expense.id, expense.description, expense.value);
+            exp.calcPercentage(localData.total.inc);
+            percentages.push(exp.percentage);
+            UIController.addListItem(exp, "exp");
+            return exp;
+        });
+        UIController.displayPercentages(percentages);
+
+        // Process all expense entries
+        data.allItems.inc = localData.allItems.inc.map((income)=>{
+            let inc = new Income(income.id, income.description, income.value);
+            UIController.addListItem(inc,"inc");
+            return inc;
+        });
+
+        // Calculate total income and expenses
+        calculateTotal('inc');
+        calculateTotal('exp');
+
+        // Calculate the budget : income - expense
+        data.budget = data.total.inc - data.total.exp;
+
+        // Calculate the percentage of income that we spent
+        if (data.total.inc > 0)
+            data.percentage = Math.round((data.total.exp / data.total.inc) * 100);
+        else
+            data.percentage = -1;
+
+        // Display budget
+        UIController.displayBudget({
+            budget: data.budget,
+            percentage: data.percentage,
+            totalInc: data.total.inc,
+            totalExp: data.total.exp
+        });
+
+        console.log("Updated UX data:",data);
+    }
+    var updateLocalDataObj = function (){
+        let localString = JSON.stringify(data)
+        localStorage.setItem("localBudget",localString);
+        // For debug purpose:
+        // console.log("Data:",data)
+        // console.log("Local:",localStorage.getItem("localBudget"));
+    };
+
     var data = {
         allItems: {
             exp: [],
@@ -51,6 +109,13 @@ var budgetController = (function () {
     };
 
     return {
+        preFetchData: function(){
+            fetchLocalData();
+        },
+        clearLocalData: function(){
+            localStorage.clear();
+            window.location.reload();
+        },
         addItem: function (type, des, val) {
             var newItem, ID;
 
@@ -72,6 +137,9 @@ var budgetController = (function () {
             // Push it into our data structure
             data.allItems[type].push(newItem);
 
+            // Updating Locally stored data on every operation
+            updateLocalDataObj();
+
             // Return the new element
             return newItem;
         },
@@ -88,7 +156,9 @@ var budgetController = (function () {
             if (index !== -1){
                 data.allItems[type].splice(index,1);
             }
-
+            
+            // Updating Locally stored data on every operation
+            updateLocalDataObj();
         },
 
         calculateBudget: function () {
@@ -108,12 +178,16 @@ var budgetController = (function () {
                 data.percentage = -1;
             }
 
+            // Updating Locally stored data on every operation
+            updateLocalDataObj();
         },
 
         calculatePercentage: function(){
             data.allItems.exp.forEach(function(cur){
                 cur.calcPercentage(data.total.inc);
             });
+            // Updating Locally stored data on every operation
+            updateLocalDataObj();
         },
 
         getPercentages: function(){
@@ -255,7 +329,7 @@ var UIController = (function () {
 
         displayBudget: function(obj){
             var type;
-            obj.budget > 0 ? type = 'inc' : type = 'exp';
+            obj.budget >= 0 ? type = 'inc' : type = 'exp';
 
             document.querySelector(DOMstrings.budgetLabel).textContent = formatNumber(obj.budget, type);
             document.querySelector(DOMstrings.incomeLabel).textContent = formatNumber(obj.totalInc, 'inc');
@@ -344,7 +418,7 @@ var Controller = (function (budgetCtrl, UICtrl) {
 
         // 2. Return the budget
         var budget = budgetCtrl.getBudget();
-
+        
         // 3. Update the UI
         UICtrl.displayBudget(budget);
     };
@@ -359,6 +433,7 @@ var Controller = (function (budgetCtrl, UICtrl) {
 
         // 3. Update the UI
         UICtrl.displayPercentages(percentage);
+
 
     }
 
@@ -424,9 +499,18 @@ var Controller = (function (budgetCtrl, UICtrl) {
             });
             UICtrl.displayMonth();
             setupEventListeners();
+
+            // Fetch previous data
+            budgetCtrl.preFetchData();
+
         },
     };
 })(budgetController, UIController);
 
 Controller.init();
 
+
+function clearEverything(){
+    if(confirm("This will clear all the data on this page permanently\n Are you sure?"))
+        budgetController.clearLocalData();
+}
