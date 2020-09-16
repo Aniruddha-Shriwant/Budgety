@@ -34,32 +34,17 @@ var budgetController = (function () {
         data.total[type] = sum;
     };
 
-    var fetchLocalData = function(){
-        let localStorageString = localStorage.getItem("localBudget");
-        if(!localStorageString)
-            return console.log("Not found local data");
+    var fetchLocalData = function(localData){
         
-        let localData = JSON.parse(localStorageString);
-
-        console.log("LocalData:",localData);
-        
-        // Process all income entries
-        let percentages = [];
+        // Process all expense entries
         data.allItems.exp = localData.allItems.exp.map((expense)=>{
             let exp = new Expense(expense.id, expense.description, expense.value);
             exp.calcPercentage(localData.total.inc);
-            percentages.push(exp.percentage);
-            UIController.addListItem(exp, "exp");
             return exp;
         });
-        UIController.displayPercentages(percentages);
 
-        // Process all expense entries
-        data.allItems.inc = localData.allItems.inc.map((income)=>{
-            let inc = new Income(income.id, income.description, income.value);
-            UIController.addListItem(inc,"inc");
-            return inc;
-        });
+        // Process all income entries
+        data.allItems.inc = localData.allItems.inc.map(income => new Income(income.id, income.description, income.value));
 
         // Calculate total income and expenses
         calculateTotal('inc');
@@ -74,16 +59,9 @@ var budgetController = (function () {
         else
             data.percentage = -1;
 
-        // Display budget
-        UIController.displayBudget({
-            budget: data.budget,
-            percentage: data.percentage,
-            totalInc: data.total.inc,
-            totalExp: data.total.exp
-        });
-
-        console.log("Updated UX data:",data);
+        return data;
     }
+    
     var updateLocalDataObj = function (){
         let localString = JSON.stringify(data)
         localStorage.setItem("localBudget",localString);
@@ -109,8 +87,8 @@ var budgetController = (function () {
     };
 
     return {
-        preFetchData: function(){
-            fetchLocalData();
+        preFetchData: function(data){
+            return fetchLocalData(data);
         },
         clearLocalData: function(){
             localStorage.clear();
@@ -270,6 +248,7 @@ var UIController = (function () {
     };
 
     return {
+
         getInput: function () {
             return {
                 type: document.querySelector(DOMstrings.inputType).value, // We will get inc or exp
@@ -390,6 +369,28 @@ var UIController = (function () {
 
         getDOMstrings: function () {
             return DOMstrings;
+        },
+        
+        prepareUI: function(data){
+
+            // Process all expense entries and their percentages
+            let percentages = [];
+            data.allItems.exp.forEach( expense => {
+                percentages.push(expense.percentage);
+                this.addListItem(expense, "exp");
+            });
+            this.displayPercentages(percentages);
+    
+            // Process all income entries
+            data.allItems.inc.forEach( income => UIController.addListItem(income, "inc") );
+            
+            // Display budget
+            this.displayBudget({
+                budget: data.budget,
+                percentage: data.percentage,
+                totalInc: data.total.inc,
+                totalExp: data.total.exp
+            });
         }
     };
 })();
@@ -501,8 +502,15 @@ var Controller = (function (budgetCtrl, UICtrl) {
             setupEventListeners();
 
             // Fetch previous data
-            budgetCtrl.preFetchData();
-
+            let localStorageString = localStorage.getItem("localBudget");
+            if(localStorageString){
+                let localData = JSON.parse(localStorageString);
+                let preparedData = budgetCtrl.preFetchData(localData);
+                UICtrl.prepareUI(preparedData);
+                console.log("Locally stored data:",localData);
+            }else
+                console.log("Couldn't find any local data !");
+            
         },
     };
 })(budgetController, UIController);
