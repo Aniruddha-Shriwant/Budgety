@@ -28,5 +28,5 @@ Wanna add some features? Feel free, here are some of our suggestions:
 
     Contact me at aniruddhashriwant@gmail.com prior to working on this 
 
-**Feel free to address any issue or any feature, Happy Hacktoberfest**
+**Feel free to address any issue or any feature.**
 
