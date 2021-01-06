@@ -26,7 +26,7 @@ Wanna add some features? Feel free, here are some of our suggestions:
 # Big feature we're aspiring
   - Maintain user logins to keep data safely on servers and accessible from anywhere.
 
-    Contact me at aniruddhashriwant@gmail.com prior to working on this 
+    Contact me at aniruddhashriwant@gmail.com prior to working on this.
 
 **Feel free to address any issue or any feature.**
 
